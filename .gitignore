@@ -8,3 +8,5 @@
 *.opendb
 *.ipch
 *.suo
+*.db-wal
+*.db-shm
