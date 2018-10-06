@@ -1,0 +1,9 @@
+*/Binaries/
+*/Build/
+*/Intermediate/
+*/DerivedDataCache
+*/Saved/
+
+*.VC.db
+*.opendb
+*.ipch
