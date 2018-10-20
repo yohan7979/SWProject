@@ -35,4 +35,20 @@ private:
 	void MoveRight(float fValue);
 	void Turn(float fValue);
 	void LookUp(float fValue);
+
+	void DoJump();
+	void EquipWeapon();
+
+
+public:
+	UPROPERTY(ReplicatedUsing=OnRepEquipped, BlueprintReadOnly)
+	bool bEquipped;
+
+public:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEquipped();
+
+	UFUNCTION()
+	void OnRepEquipped();
+	
 };
