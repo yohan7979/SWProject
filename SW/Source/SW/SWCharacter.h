@@ -41,12 +41,15 @@ private:
 	void ZoomIn();
 	void ZoomOut();
 
+private:
+	FTimerHandle TimerHandle_Zoom;
+	void DoZoomInterpotion();
 
 public:
 	UPROPERTY(ReplicatedUsing=OnRepEquipped, BlueprintReadOnly)
 	bool bEquipped;
 
-	UPROPERTY(ReplicatedUsing=OnRepZoom, BlueprintReadOnly)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bZoom;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -54,6 +57,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float ZoomedFOV;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float ZoomInterpSpeed;
 
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -64,8 +70,4 @@ public:
 
 	UFUNCTION()
 	void OnRepEquipped();
-
-	UFUNCTION()
-	void OnRepZoom();
-	
 };

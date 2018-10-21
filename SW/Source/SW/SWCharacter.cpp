@@ -20,6 +20,7 @@ ASWCharacter::ASWCharacter()
 
 	DefaultFOV = CameraComp->FieldOfView;
 	ZoomedFOV = 40.f;
+	ZoomInterpSpeed = 15.f;
 }
 
 void ASWCharacter::BeginPlay()
@@ -32,6 +33,10 @@ void ASWCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Zoom Interpolation
+	float TargetFOV = bZoom ? ZoomedFOV : DefaultFOV;
+	float CurrnetFov = FMath::FInterpTo(CameraComp->FieldOfView, TargetFOV, DeltaTime, ZoomInterpSpeed);
+	CameraComp->SetFieldOfView(CurrnetFov);
 }
 
 void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -106,6 +111,11 @@ void ASWCharacter::ZoomOut()
 	ServerZoom(false);
 }
 
+void ASWCharacter::DoZoomInterpotion()
+{
+
+}
+
 void ASWCharacter::ServerEquipped_Implementation()
 {
 	bEquipped = !bEquipped;
@@ -121,8 +131,6 @@ bool ASWCharacter::ServerEquipped_Validate()
 void ASWCharacter::ServerZoom_Implementation(bool isZoom)
 {
 	bZoom = isZoom;
-
-	OnRepZoom();
 }
 
 bool ASWCharacter::ServerZoom_Validate(bool isZoom)
@@ -141,18 +149,6 @@ void ASWCharacter::OnRepEquipped()
 	{
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-	}
-}
-
-void ASWCharacter::OnRepZoom()
-{
-	if (bZoom)
-	{
-		CameraComp->SetFieldOfView(ZoomedFOV);
-	}
-	else
-	{
-		CameraComp->SetFieldOfView(DefaultFOV);
 	}
 }
 
