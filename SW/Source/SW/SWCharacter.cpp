@@ -18,7 +18,8 @@ ASWCharacter::ASWCharacter()
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComp->SetupAttachment(SpringArmComp);
 
-	bEquipped = false;
+	DefaultFOV = CameraComp->FieldOfView;
+	ZoomedFOV = 40.f;
 }
 
 void ASWCharacter::BeginPlay()
@@ -44,6 +45,8 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAction("DoJump", IE_Pressed, this, &ASWCharacter::DoJump);
 	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
+	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &ASWCharacter::ZoomIn);
+	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &ASWCharacter::ZoomOut);
 
 }
 
@@ -89,6 +92,20 @@ void ASWCharacter::EquipWeapon()
 	ServerEquipped();
 }
 
+void ASWCharacter::ZoomIn()
+{
+	if (!bEquipped)
+		return;
+
+	ServerZoom(true);
+}
+
+void ASWCharacter::ZoomOut()
+{
+
+	ServerZoom(false);
+}
+
 void ASWCharacter::ServerEquipped_Implementation()
 {
 	bEquipped = !bEquipped;
@@ -97,6 +114,18 @@ void ASWCharacter::ServerEquipped_Implementation()
 }
 
 bool ASWCharacter::ServerEquipped_Validate()
+{
+	return true;
+}
+
+void ASWCharacter::ServerZoom_Implementation(bool isZoom)
+{
+	bZoom = isZoom;
+
+	OnRepZoom();
+}
+
+bool ASWCharacter::ServerZoom_Validate(bool isZoom)
 {
 	return true;
 }
@@ -115,10 +144,23 @@ void ASWCharacter::OnRepEquipped()
 	}
 }
 
+void ASWCharacter::OnRepZoom()
+{
+	if (bZoom)
+	{
+		CameraComp->SetFieldOfView(ZoomedFOV);
+	}
+	else
+	{
+		CameraComp->SetFieldOfView(DefaultFOV);
+	}
+}
+
 void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASWCharacter, bEquipped);
+	DOREPLIFETIME(ASWCharacter, bZoom);
 }
 

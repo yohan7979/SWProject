@@ -38,17 +38,34 @@ private:
 
 	void DoJump();
 	void EquipWeapon();
+	void ZoomIn();
+	void ZoomOut();
 
 
 public:
 	UPROPERTY(ReplicatedUsing=OnRepEquipped, BlueprintReadOnly)
 	bool bEquipped;
 
+	UPROPERTY(ReplicatedUsing=OnRepZoom, BlueprintReadOnly)
+	bool bZoom;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float DefaultFOV;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float ZoomedFOV;
+
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipped();
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerZoom(bool isZoom);
+
 	UFUNCTION()
 	void OnRepEquipped();
+
+	UFUNCTION()
+	void OnRepZoom();
 	
 };
