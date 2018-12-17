@@ -40,6 +40,7 @@ private:
 	void EquipWeapon();
 	void ZoomIn();
 	void ZoomOut();
+	void ToggleProne();
 
 private:
 	FTimerHandle TimerHandle_Zoom;
@@ -60,6 +61,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float ZoomInterpSpeed;
+	
+	UPROPERTY(ReplicatedUsing=OnRepProne, BlueprintReadOnly)
+	bool bProne;
 
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -70,4 +74,13 @@ public:
 
 	UFUNCTION()
 	void OnRepEquipped();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerProne(bool isProne);
+	
+	UFUNCTION()
+	void OnRepProne();
+
+	UFUNCTION(BlueprintCallable)
+	void NotifyStandEnd();
 };

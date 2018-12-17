@@ -2,6 +2,7 @@
 #include "SWCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -52,6 +53,7 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &ASWCharacter::ZoomIn);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &ASWCharacter::ZoomOut);
+	PlayerInputComponent->BindAction("ToggleProne", IE_Pressed, this, &ASWCharacter::ToggleProne);
 
 }
 
@@ -111,6 +113,13 @@ void ASWCharacter::ZoomOut()
 	ServerZoom(false);
 }
 
+void ASWCharacter::ToggleProne()
+{
+	bProne = !bProne;
+
+	ServerProne(bProne);
+}
+
 void ASWCharacter::DoZoomInterpotion()
 {
 
@@ -152,11 +161,37 @@ void ASWCharacter::OnRepEquipped()
 	}
 }
 
+void ASWCharacter::ServerProne_Implementation(bool isProne)
+{
+	bProne = isProne;
+
+	OnRepProne();
+}
+
+bool ASWCharacter::ServerProne_Validate(bool isProne)
+{
+	return true;
+}
+
+void ASWCharacter::OnRepProne()
+{
+	if (bProne)
+	{
+		Controller->SetIgnoreMoveInput(true);
+	}
+}
+
+void ASWCharacter::NotifyStandEnd()
+{
+	Controller->SetIgnoreMoveInput(false);
+}
+
 void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASWCharacter, bEquipped);
 	DOREPLIFETIME(ASWCharacter, bZoom);
+	DOREPLIFETIME(ASWCharacter, bProne);
 }
 
