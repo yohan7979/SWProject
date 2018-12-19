@@ -7,6 +7,7 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class ASWWeapon;
 
 UCLASS()
 class SW_API ASWCharacter : public ACharacter
@@ -29,6 +30,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USpringArmComponent* SpringArmComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	class ASWWeapon* Weapon;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<ASWWeapon> WeaponClass;
 
 private:
 	void MoveForward(float fValue);

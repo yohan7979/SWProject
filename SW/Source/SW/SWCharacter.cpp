@@ -7,6 +7,8 @@
 #include "Components/InputComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "SWWeapon.h"
+#include "Engine/World.h"
 
 ASWCharacter::ASWCharacter()
 {
@@ -27,7 +29,16 @@ ASWCharacter::ASWCharacter()
 void ASWCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Weapon = GetWorld()->SpawnActor<ASWWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+	if (Weapon != nullptr)
+	{
+		Weapon->SetOwner(this);
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+	}
 }
 
 void ASWCharacter::Tick(float DeltaTime)

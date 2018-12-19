@@ -10,3 +10,4 @@
 *.suo
 *.db-wal
 *.db-shm
+*.uasset
