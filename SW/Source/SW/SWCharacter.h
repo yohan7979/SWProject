@@ -31,8 +31,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USpringArmComponent* SpringArmComp;
 
-	UPROPERTY(VisibleAnywhere, Category = "Weapon")
-	class ASWWeapon* Weapon;
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Weapon")
+	ASWWeapon* Weapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<ASWWeapon> WeaponClass;
@@ -43,15 +43,15 @@ private:
 	void Turn(float fValue);
 	void LookUp(float fValue);
 
-	void DoJump();
+	void BeginJump();
+	void EndJump();
 	void EquipWeapon();
 	void ZoomIn();
 	void ZoomOut();
 	void ToggleProne();
 
-private:
-	FTimerHandle TimerHandle_Zoom;
-	void DoZoomInterpotion();
+	void StartFire();
+	void StopFire();
 
 public:
 	UPROPERTY(ReplicatedUsing=OnRepEquipped, BlueprintReadOnly)

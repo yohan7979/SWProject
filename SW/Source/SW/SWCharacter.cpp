@@ -9,6 +9,7 @@
 #include "Net/UnrealNetwork.h"
 #include "SWWeapon.h"
 #include "Engine/World.h"
+#include "Components/SceneComponent.h"
 
 ASWCharacter::ASWCharacter()
 {
@@ -30,14 +31,18 @@ void ASWCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Weapon = GetWorld()->SpawnActor<ASWWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-
-	if (Weapon != nullptr)
+	// Create weapon on Server, Replicate to all Client.
+	if (Role == ROLE_Authority)
 	{
-		Weapon->SetOwner(this);
-		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Weapon = GetWorld()->SpawnActor<ASWWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+		if (Weapon != nullptr)
+		{
+			Weapon->SetOwner(this);
+			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+		}
 	}
 }
 
@@ -60,11 +65,14 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("Turn", this, &ASWCharacter::Turn);
 	PlayerInputComponent->BindAxis("LookUp", this, &ASWCharacter::LookUp);
 
-	PlayerInputComponent->BindAction("DoJump", IE_Pressed, this, &ASWCharacter::DoJump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASWCharacter::BeginJump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASWCharacter::EndJump);
 	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &ASWCharacter::ZoomIn);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &ASWCharacter::ZoomOut);
 	PlayerInputComponent->BindAction("ToggleProne", IE_Pressed, this, &ASWCharacter::ToggleProne);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASWCharacter::StartFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASWCharacter::StopFire);
 
 }
 
@@ -100,9 +108,14 @@ void ASWCharacter::LookUp(float fValue)
 	AddControllerPitchInput(fValue);
 }
 
-void ASWCharacter::DoJump()
+void ASWCharacter::BeginJump()
 {
 	Jump();
+}
+
+void ASWCharacter::EndJump()
+{
+	StopJumping();
 }
 
 void ASWCharacter::EquipWeapon()
@@ -131,9 +144,20 @@ void ASWCharacter::ToggleProne()
 	ServerProne(bProne);
 }
 
-void ASWCharacter::DoZoomInterpotion()
+void ASWCharacter::StartFire()
 {
+	if (Weapon != nullptr)
+	{
+		Weapon->StartFire();
+	}
+}
 
+void ASWCharacter::StopFire()
+{
+	if (Weapon != nullptr)
+	{
+		Weapon->StopFire();
+	}
 }
 
 void ASWCharacter::ServerEquipped_Implementation()
@@ -204,5 +228,6 @@ void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutL
 	DOREPLIFETIME(ASWCharacter, bEquipped);
 	DOREPLIFETIME(ASWCharacter, bZoom);
 	DOREPLIFETIME(ASWCharacter, bProne);
+	DOREPLIFETIME(ASWCharacter, Weapon);
 }
 

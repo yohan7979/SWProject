@@ -7,6 +7,16 @@
 #include "SWWeapon.generated.h"
 
 class USkeletalMeshComponent;
+class UParticleSystem;
+
+UENUM()
+enum class EWeaponState
+{
+	EWeaponState_Idle,
+	EWeaponState_Fire,
+	EWeaponState_Reload,
+	EWeaponState_Max
+};
 
 UCLASS()
 class SW_API ASWWeapon : public AActor
@@ -20,13 +30,43 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Fire();
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-	virtual void Fire();
+	void StartFire();
+	void StopFire();
+
+	UFUNCTION(Client, Unreliable, WithValidation)
+	void ClientPlayFireEffect();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetWeaponState(EWeaponState NewState);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	USkeletalMeshComponent* MeshComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Particles")
+	UParticleSystem* MuzzleEffect;
+
+	UPROPERTY(ReplicatedUsing=OnRep_WeaponStateChanged)
+	EWeaponState WeaponState;
+
+	UFUNCTION()
+	void OnRep_WeaponStateChanged();
+
+	UPROPERTY(ReplicatedUsing=OnRep_ShotInfo)
+	int32 ShotCount;
+
+	UFUNCTION()
+	void OnRep_ShotInfo();
+
+private:
+	FTimerHandle TimerHandle_FireDelay;
+	float fTimeBetweenShot;
+	float fLastFiredTime;
+	FName MuzzleSocketName;
 };
