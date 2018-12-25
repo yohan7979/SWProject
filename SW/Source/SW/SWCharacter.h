@@ -23,6 +23,7 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	FVector GetSpringArmWorldPos() const;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -72,12 +73,21 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRepProne, BlueprintReadOnly)
 	bool bProne;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	float AimingPitch;
+
+	float PrevPitch;
+	float CurrentPitch;
+
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipped();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerZoom(bool isZoom);
+
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void ServerSetAimingPitch(float fPitch);
 
 	UFUNCTION()
 	void OnRepEquipped();

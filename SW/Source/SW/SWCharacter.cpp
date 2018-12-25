@@ -76,6 +76,11 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 }
 
+FVector ASWCharacter::GetSpringArmWorldPos() const
+{
+	return SpringArmComp->GetComponentLocation();
+}
+
 void ASWCharacter::MoveForward(float fValue)
 {
 	float roll, pitch, yaw;
@@ -106,6 +111,15 @@ void ASWCharacter::Turn(float fValue)
 void ASWCharacter::LookUp(float fValue)
 {
 	AddControllerPitchInput(fValue);
+
+	float roll, pitch, yaw;
+	UKismetMathLibrary::BreakRotator(GetControlRotation(), roll, pitch, yaw);
+	AimingPitch = FMath::ClampAngle(pitch, -90.f, 90.f);
+	if (fabs(AimingPitch - PrevPitch) > 5.f)
+	{
+		ServerSetAimingPitch(AimingPitch);
+		PrevPitch = AimingPitch;
+	}
 }
 
 void ASWCharacter::BeginJump()
@@ -182,6 +196,16 @@ bool ASWCharacter::ServerZoom_Validate(bool isZoom)
 	return true;
 }
 
+void ASWCharacter::ServerSetAimingPitch_Implementation(float fPitch)
+{
+	AimingPitch = fPitch;
+}
+
+bool ASWCharacter::ServerSetAimingPitch_Validate(float fPitch)
+{
+	return true;
+}
+
 void ASWCharacter::OnRepEquipped()
 {
 	if (bEquipped)
@@ -225,9 +249,10 @@ void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutL
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(ASWCharacter, Weapon);
 	DOREPLIFETIME(ASWCharacter, bEquipped);
 	DOREPLIFETIME(ASWCharacter, bZoom);
 	DOREPLIFETIME(ASWCharacter, bProne);
-	DOREPLIFETIME(ASWCharacter, Weapon);
+	DOREPLIFETIME(ASWCharacter, AimingPitch);
 }
 

@@ -36,14 +36,19 @@ public:
 	void StartFire();
 	void StopFire();
 
-	UFUNCTION(Client, Unreliable, WithValidation)
-	void ClientPlayFireEffect();
+	void PlayFireEffect();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetWeaponState(EWeaponState NewState);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerFire();
+
+	UFUNCTION(Server, Unreliable, WithValidation)
+	void Server_PlayFireEffect();
+
+	UFUNCTION(NetMulticast, Unreliable, WithValidation)
+	void Multicast_FireEffect();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
