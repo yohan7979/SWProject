@@ -112,9 +112,12 @@ void ASWCharacter::LookUp(float fValue)
 {
 	AddControllerPitchInput(fValue);
 
+	// AimOffset : use controller Pitch
 	float roll, pitch, yaw;
 	UKismetMathLibrary::BreakRotator(GetControlRotation(), roll, pitch, yaw);
 	AimingPitch = FMath::ClampAngle(pitch, -90.f, 90.f);
+
+	// call server if difference is larger than 5.f.
 	if (fabs(AimingPitch - PrevPitch) > 5.f)
 	{
 		ServerSetAimingPitch(AimingPitch);
@@ -154,6 +157,11 @@ void ASWCharacter::ZoomOut()
 void ASWCharacter::ToggleProne()
 {
 	bProne = !bProne;
+
+	if (bProne)
+	{
+		Controller->SetIgnoreMoveInput(true);
+	}
 
 	ServerProne(bProne);
 }
@@ -234,15 +242,13 @@ bool ASWCharacter::ServerProne_Validate(bool isProne)
 
 void ASWCharacter::OnRepProne()
 {
-	if (bProne)
-	{
-		Controller->SetIgnoreMoveInput(true);
-	}
+
 }
 
 void ASWCharacter::NotifyStandEnd()
 {
-	Controller->SetIgnoreMoveInput(false);
+	if(Controller)
+		Controller->SetIgnoreMoveInput(false);
 }
 
 void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
