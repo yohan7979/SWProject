@@ -38,7 +38,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<ASWWeapon> WeaponClass;
 
-private:
+public:
 	void MoveForward(float fValue);
 	void MoveRight(float fValue);
 	void Turn(float fValue);
@@ -61,6 +61,7 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bZoom;
 
+	/** Fov Interp */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float DefaultFOV;
 
@@ -70,14 +71,22 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float ZoomInterpSpeed;
 	
+	/** CameraZ Interp */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float DefaultCameraZ;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float ProneCameraZ;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float CameraInterpSpeed;
+	
 	UPROPERTY(ReplicatedUsing=OnRepProne, BlueprintReadOnly)
 	bool bProne;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	float AimingPitch;
-
 	float PrevPitch;
-	float CurrentPitch;
 
 public:
 	UFUNCTION(Server, Reliable, WithValidation)

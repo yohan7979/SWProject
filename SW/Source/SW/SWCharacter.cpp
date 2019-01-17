@@ -10,6 +10,7 @@
 #include "SWWeapon.h"
 #include "Engine/World.h"
 #include "Components/SceneComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ASWCharacter::ASWCharacter()
 {
@@ -25,6 +26,10 @@ ASWCharacter::ASWCharacter()
 	DefaultFOV = CameraComp->FieldOfView;
 	ZoomedFOV = 40.f;
 	ZoomInterpSpeed = 15.f;
+
+	DefaultCameraZ = 70.f;
+	ProneCameraZ = 20.f;
+	CameraInterpSpeed = 5.f;
 }
 
 void ASWCharacter::BeginPlay()
@@ -54,6 +59,11 @@ void ASWCharacter::Tick(float DeltaTime)
 	float TargetFOV = bZoom ? ZoomedFOV : DefaultFOV;
 	float CurrnetFov = FMath::FInterpTo(CameraComp->FieldOfView, TargetFOV, DeltaTime, ZoomInterpSpeed);
 	CameraComp->SetFieldOfView(CurrnetFov);
+
+	// SpringArm Interp
+	float TargetCameraZ = bProne ? ProneCameraZ : DefaultCameraZ;
+	float CurrentCameraZ = FMath::FInterpTo(SpringArmComp->RelativeLocation.Z, TargetCameraZ, DeltaTime, CameraInterpSpeed);
+	SpringArmComp->SetRelativeLocation(FVector(0.f, 0.f, CurrentCameraZ));
 }
 
 void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -67,13 +77,12 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASWCharacter::BeginJump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ASWCharacter::EndJump);
-	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &ASWCharacter::ZoomIn);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &ASWCharacter::ZoomOut);
-	PlayerInputComponent->BindAction("ToggleProne", IE_Pressed, this, &ASWCharacter::ToggleProne);
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASWCharacter::StartFire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASWCharacter::StopFire);
-
+	PlayerInputComponent->BindAction("ToggleProne", IE_Pressed, this, &ASWCharacter::ToggleProne);
+	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
 }
 
 FVector ASWCharacter::GetSpringArmWorldPos() const
@@ -111,6 +120,10 @@ void ASWCharacter::Turn(float fValue)
 void ASWCharacter::LookUp(float fValue)
 {
 	AddControllerPitchInput(fValue);
+
+	// Only update aimpitch on equipped
+	if (!bEquipped)
+		return;
 
 	// AimOffset : use controller Pitch
 	float roll, pitch, yaw;
@@ -150,7 +163,6 @@ void ASWCharacter::ZoomIn()
 
 void ASWCharacter::ZoomOut()
 {
-
 	ServerZoom(false);
 }
 
@@ -160,7 +172,16 @@ void ASWCharacter::ToggleProne()
 
 	if (bProne)
 	{
-		Controller->SetIgnoreMoveInput(true);
+		if(!Controller->IsMoveInputIgnored())
+			Controller->SetIgnoreMoveInput(true);
+
+		UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMin = -20.f;
+		UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMax = 20.f;
+	}
+	else
+	{
+		UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMin = -89.9f;
+		UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->ViewPitchMax = 89.9f;
 	}
 
 	ServerProne(bProne);
@@ -168,6 +189,9 @@ void ASWCharacter::ToggleProne()
 
 void ASWCharacter::StartFire()
 {
+	if (!bEquipped)
+		return;
+
 	if (Weapon != nullptr)
 	{
 		Weapon->StartFire();
@@ -225,6 +249,9 @@ void ASWCharacter::OnRepEquipped()
 	{
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		
+		AimingPitch = 0.f;
+		StopFire();
 	}
 }
 
