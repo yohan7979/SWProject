@@ -7,6 +7,7 @@
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+#include "Animation/AnimMontage.h"
 
 // Sets default values
 ASWWeapon::ASWWeapon()

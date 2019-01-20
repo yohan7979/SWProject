@@ -195,6 +195,7 @@ void ASWCharacter::StartFire()
 	if (Weapon != nullptr)
 	{
 		Weapon->StartFire();
+		ServerFiring(true);
 	}
 }
 
@@ -203,6 +204,7 @@ void ASWCharacter::StopFire()
 	if (Weapon != nullptr)
 	{
 		Weapon->StopFire();
+		ServerFiring(false);
 	}
 }
 
@@ -234,6 +236,18 @@ void ASWCharacter::ServerSetAimingPitch_Implementation(float fPitch)
 }
 
 bool ASWCharacter::ServerSetAimingPitch_Validate(float fPitch)
+{
+	return true;
+}
+
+
+void ASWCharacter::ServerFiring_Implementation(bool isFiring)
+{
+	bFiring = isFiring;
+}
+
+
+bool ASWCharacter::ServerFiring_Validate(bool isFiring)
 {
 	return true;
 }
@@ -283,6 +297,7 @@ void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ASWCharacter, Weapon);
+	DOREPLIFETIME(ASWCharacter, bFiring);
 	DOREPLIFETIME(ASWCharacter, bEquipped);
 	DOREPLIFETIME(ASWCharacter, bZoom);
 	DOREPLIFETIME(ASWCharacter, bProne);

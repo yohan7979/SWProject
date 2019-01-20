@@ -8,6 +8,7 @@
 
 class USkeletalMeshComponent;
 class UParticleSystem;
+class UAnimMontage;
 
 UENUM()
 enum class EWeaponState
@@ -68,6 +69,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ShotInfo();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animations")
+	UAnimMontage* FireAnim;
 
 private:
 	FTimerHandle TimerHandle_FireDelay;

@@ -59,6 +59,9 @@ public:
 	bool bEquipped;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
+	bool bFiring;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bZoom;
 
 	/** Fov Interp */
@@ -91,6 +94,9 @@ public:
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipped();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFiring(bool isFiring);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerZoom(bool isZoom);
