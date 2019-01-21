@@ -83,6 +83,7 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASWCharacter::StopFire);
 	PlayerInputComponent->BindAction("ToggleProne", IE_Pressed, this, &ASWCharacter::ToggleProne);
 	PlayerInputComponent->BindAction("EquipWeapon", IE_Pressed, this, &ASWCharacter::EquipWeapon);
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASWCharacter::Reload);
 }
 
 FVector ASWCharacter::GetSpringArmWorldPos() const
@@ -208,6 +209,17 @@ void ASWCharacter::StopFire()
 	}
 }
 
+void ASWCharacter::Reload()
+{
+	ServerReload(true);	
+	StopFire();
+}
+
+void ASWCharacter::NotifyReloadEnd()
+{
+	ServerReload(false);
+}
+
 void ASWCharacter::ServerEquipped_Implementation()
 {
 	bEquipped = !bEquipped;
@@ -252,6 +264,18 @@ bool ASWCharacter::ServerFiring_Validate(bool isFiring)
 	return true;
 }
 
+void ASWCharacter::ServerReload_Implementation(bool isReload)
+{
+	bReload = isReload;
+
+	OnRepReload();
+}
+
+bool ASWCharacter::ServerReload_Validate(bool isReload)
+{
+	return true;
+}
+
 void ASWCharacter::OnRepEquipped()
 {
 	if (bEquipped)
@@ -266,6 +290,28 @@ void ASWCharacter::OnRepEquipped()
 		
 		AimingPitch = 0.f;
 		StopFire();
+	}
+}
+
+void ASWCharacter::OnRepReload()
+{
+	UAnimMontage* ReloadAnim = Weapon ? Weapon->ReloadAnim : nullptr;
+
+	// Play Reload Anim
+	if (bReload)
+	{
+		if (ReloadAnim)
+		{
+			PlayAnimMontage(ReloadAnim);
+		}
+	}
+	// Stop Reload Anim
+	else
+	{
+		if (ReloadAnim)
+		{
+			StopAnimMontage(ReloadAnim);
+		}
 	}
 }
 
@@ -299,6 +345,7 @@ void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutL
 	DOREPLIFETIME(ASWCharacter, Weapon);
 	DOREPLIFETIME(ASWCharacter, bFiring);
 	DOREPLIFETIME(ASWCharacter, bEquipped);
+	DOREPLIFETIME(ASWCharacter, bReload);
 	DOREPLIFETIME(ASWCharacter, bZoom);
 	DOREPLIFETIME(ASWCharacter, bProne);
 	DOREPLIFETIME(ASWCharacter, AimingPitch);

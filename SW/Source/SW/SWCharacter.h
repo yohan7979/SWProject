@@ -54,12 +54,18 @@ public:
 	void StartFire();
 	void StopFire();
 
+	void Reload();
+	void NotifyReloadEnd();
+
 public:
 	UPROPERTY(ReplicatedUsing=OnRepEquipped, BlueprintReadOnly)
 	bool bEquipped;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bFiring;
+
+	UPROPERTY(ReplicatedUsing=OnRepReload, BlueprintReadOnly)
+	bool bReload;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bZoom;
@@ -99,6 +105,9 @@ public:
 	void ServerFiring(bool isFiring);
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerReload(bool isReload);
+
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerZoom(bool isZoom);
 
 	UFUNCTION(Server, Unreliable, WithValidation)
@@ -106,6 +115,9 @@ public:
 
 	UFUNCTION()
 	void OnRepEquipped();
+
+	UFUNCTION()
+	void OnRepReload();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerProne(bool isProne);

@@ -70,8 +70,12 @@ protected:
 	UFUNCTION()
 	void OnRep_ShotInfo();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animations")
-	UAnimMontage* FireAnim;
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UAnimMontage* ReloadAnim;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UAnimMontage* EquipAnim;
 
 private:
 	FTimerHandle TimerHandle_FireDelay;
