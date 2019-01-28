@@ -30,6 +30,10 @@ ASWCharacter::ASWCharacter()
 	DefaultCameraZ = 70.f;
 	ProneCameraZ = 20.f;
 	CameraInterpSpeed = 5.f;
+
+	CurrentHealth = 100.f;
+
+	Tags.Add(TEXT("Player"));
 }
 
 void ASWCharacter::BeginPlay()
@@ -48,6 +52,8 @@ void ASWCharacter::BeginPlay()
 			Weapon->SetOwner(this);
 			Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
 		}
+
+		OnTakePointDamage.AddDynamic(this, &ASWCharacter::HandleTakeDamage);
 	}
 }
 
@@ -89,6 +95,11 @@ void ASWCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 FVector ASWCharacter::GetSpringArmWorldPos() const
 {
 	return SpringArmComp->GetComponentLocation();
+}
+
+void ASWCharacter::HandleTakeDamage(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser)
+{
+	CurrentHealth = FMath::Max(0.f, CurrentHealth - Damage);
 }
 
 void ASWCharacter::MoveForward(float fValue)
@@ -211,13 +222,23 @@ void ASWCharacter::StopFire()
 
 void ASWCharacter::Reload()
 {
-	ServerReload(true);	
-	StopFire();
+	if (Weapon != nullptr)
+	{
+		ServerReload(true);
+		StopFire();
+
+		Weapon->StartReload();
+	}
 }
 
 void ASWCharacter::NotifyReloadEnd()
 {
-	ServerReload(false);
+	if (Weapon != nullptr)
+	{
+		ServerReload(false);
+
+		Weapon->EndReload();
+	}
 }
 
 void ASWCharacter::ServerEquipped_Implementation()
@@ -338,6 +359,11 @@ void ASWCharacter::NotifyStandEnd()
 		Controller->SetIgnoreMoveInput(false);
 }
 
+void ASWCharacter::OnRep_HealthChanged()
+{
+
+}
+
 void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -349,5 +375,6 @@ void ASWCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutL
 	DOREPLIFETIME(ASWCharacter, bZoom);
 	DOREPLIFETIME(ASWCharacter, bProne);
 	DOREPLIFETIME(ASWCharacter, AimingPitch);
+	DOREPLIFETIME(ASWCharacter, CurrentHealth);
 }
 

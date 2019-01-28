@@ -37,26 +37,42 @@ public:
 	void StartFire();
 	void StopFire();
 
+	void StartReload();
+	void EndReload();
+
 	void PlayFireEffect();
+	void PlayImpactEffect(AActor* HitActor, const FVector& ImpactPoint);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetWeaponState(EWeaponState NewState);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerFire();
+	void Server_Fire();
 
 	UFUNCTION(Server, Unreliable, WithValidation)
-	void Server_PlayFireEffect();
+	void Server_PlayImpactEffect(AActor* HitActor, const FVector& ImpactPoint);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Request_ApplyDamage(AActor* DamagedActor, float BaseDamage, const FVector& HitFromDirection, FName BoneName);
 
 	UFUNCTION(NetMulticast, Unreliable, WithValidation)
 	void Multicast_FireEffect();
 
+	UFUNCTION(NetMulticast, Unreliable, WithValidation)
+	void Multicast_ImpactEffect(AActor* HitActor, const FVector& ImpactPoint);
+
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent* MeshComp;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Particles")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles")
 	UParticleSystem* MuzzleEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles")
+	UParticleSystem* FleshImpact;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Particles")
+	UParticleSystem* DefaultImpact;
 
 	UPROPERTY(ReplicatedUsing=OnRep_WeaponStateChanged)
 	EWeaponState WeaponState;
@@ -69,6 +85,8 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ShotInfo();
+
+	float DamageAmount;
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")

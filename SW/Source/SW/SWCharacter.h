@@ -25,6 +25,10 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	FVector GetSpringArmWorldPos() const;
 
+	UFUNCTION()
+	void HandleTakeDamage(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, 
+		FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UCameraComponent* CameraComp;
@@ -97,6 +101,9 @@ public:
 	float AimingPitch;
 	float PrevPitch;
 
+	UPROPERTY(ReplicatedUsing=OnRep_HealthChanged)
+	float CurrentHealth;
+
 public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipped();
@@ -127,4 +134,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void NotifyStandEnd();
+
+	UFUNCTION()
+	void OnRep_HealthChanged();
 };

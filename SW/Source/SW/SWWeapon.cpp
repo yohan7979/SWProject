@@ -3,11 +3,13 @@
 #include "SWWeapon.h"
 #include "SWCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/ActorComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Animation/AnimMontage.h"
+#include "GameFramework/Actor.h"
 
 // Sets default values
 ASWWeapon::ASWWeapon()
@@ -16,6 +18,7 @@ ASWWeapon::ASWWeapon()
 	RootComponent = MeshComp;
 	MuzzleSocketName = "MuzzleFlashSocket";
 	fTimeBetweenShot = 0.1f;
+	DamageAmount = 20.f;
 	WeaponState = EWeaponState::EWeaponState_Idle;
 	SetReplicates(true);
 }
@@ -31,44 +34,42 @@ void ASWWeapon::Fire()
 {
 	fLastFiredTime = GetWorld()->TimeSeconds;
 
-	// @TODO
-	// 네트워크 지연시간을 고려하여 주체자 클라에서는 즉각적으로 처리하고,
-	// 서버가 멀티캐스트를 호출해서 타 클라와 동기화되도록 처리한다.
-
-	// line trace in client, send hit result to server
+	// line trace in client side, request server to apply damage.
 	FHitResult Hit;
-	FVector TraceStart, TraceEnd;
+	FVector TraceStart, TraceEnd, ShotDirection;
 
-	ASWCharacter* MyOwner = Cast<ASWCharacter>(GetOwner());
-	if (MyOwner)
+	ASWCharacter* Owner = Cast<ASWCharacter>(GetOwner());
+	if (Owner)
 	{
-		// Start at spring arm position
-		TraceStart = MyOwner->GetSpringArmWorldPos();
+		// use controller rotation
+		ShotDirection = Owner->GetControlRotation().Vector();
+		ShotDirection.Normalize();
 
-		// use actor rotation
-		//TraceEnd = TraceStart + MyOwner->GetActorRotation().Vector() * 1000;
-		TraceEnd = TraceStart + MyOwner->GetControlRotation().Vector() * 1000;
+		// Start at spring arm position
+		TraceStart = Owner->GetSpringArmWorldPos();
+		TraceEnd = TraceStart + ShotDirection * 10000;
 
 		FCollisionQueryParams CollisionParams;
-		CollisionParams.AddIgnoredActor(MyOwner);
+		CollisionParams.AddIgnoredActor(Owner);
 		CollisionParams.AddIgnoredActor(this);
 		CollisionParams.bTraceComplex = true;
-		//CollisionParams.bReturnPhysicalMaterial = true;
 
+		// Do Line Trace
 		if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel1, CollisionParams))
 		{
-			// request server to apply damage with hit info
-			ServerFire();
+			Request_ApplyDamage(Hit.GetActor(), DamageAmount, ShotDirection, Hit.BoneName);
+
+			PlayImpactEffect(Hit.GetActor(), Hit.ImpactPoint);
+			Server_PlayImpactEffect(Hit.GetActor(), Hit.ImpactPoint);
 		}
-
-		// play owned client's weaponfx
-		PlayFireEffect();
-
-		// request server to multicast weaponfx(exclude owner client)
-		Server_PlayFireEffect();
 
 		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, true, 3.f, 0, 1.f);
 	}
+
+	Server_Fire();
+
+	// play owned client's weaponfx
+	PlayFireEffect();
 }
 
 // #Client - Set FireTimer, request Server to change fire state.
@@ -92,6 +93,16 @@ void ASWWeapon::StopFire()
 	ServerSetWeaponState(EWeaponState::EWeaponState_Idle);
 }
 
+void ASWWeapon::StartReload()
+{
+	ServerSetWeaponState(EWeaponState::EWeaponState_Reload);
+}
+
+void ASWWeapon::EndReload()
+{
+	ServerSetWeaponState(EWeaponState::EWeaponState_Idle);
+}
+
 void ASWWeapon::PlayFireEffect()
 {
 	if (MuzzleEffect != nullptr)
@@ -100,12 +111,93 @@ void ASWWeapon::PlayFireEffect()
 	}
 }
 
-void ASWWeapon::Server_PlayFireEffect_Implementation()
+void ASWWeapon::PlayImpactEffect(AActor* HitActor, const FVector& ImpactPoint)
 {
+	// 우선 Tag로 플레이어 구분하여 이펙트 선정
+	UParticleSystem* SelectedEffect = nullptr;
+	if (HitActor->ActorHasTag(TEXT("Player")))
+	{
+		SelectedEffect = FleshImpact;
+	}
+	else
+	{
+		SelectedEffect = DefaultImpact;
+	}
+
+	if (SelectedEffect != nullptr)
+	{
+		FVector ShotDirection = ImpactPoint - MeshComp->GetSocketLocation(MuzzleSocketName);
+		ShotDirection.Normalize();
+
+		FVector ImpactLocation = ImpactPoint + ShotDirection * -10;
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactLocation, ShotDirection.Rotation());
+	}
+}
+
+void ASWWeapon::Server_PlayImpactEffect_Implementation(AActor* HitActor, const FVector& ImpactPoint)
+{
+	Multicast_ImpactEffect(HitActor, ImpactPoint);
+}
+
+bool ASWWeapon::Server_PlayImpactEffect_Validate(AActor* HitActor, const FVector& ImpactPoint)
+{
+	return true;
+}
+
+void ASWWeapon::Multicast_ImpactEffect_Implementation(AActor* HitActor, const FVector& ImpactPoint)
+{
+	// Dedi server do not play weaponfx
+	if (Role == ROLE_Authority)
+	{
+		return;
+	}
+
+	// play on SimluatedProxy, not owner client.
+	APawn* Owner = Cast<APawn>(GetOwner());
+	if (Owner && !Owner->IsLocallyControlled())
+	{
+		// play weaponfx for other client.
+		PlayImpactEffect(HitActor, ImpactPoint);		
+	}
+}
+
+bool ASWWeapon::Multicast_ImpactEffect_Validate(AActor* HitActor, const FVector& ImpactPoint)
+{
+	return true;
+}
+
+// #Server
+void ASWWeapon::Server_Fire_Implementation()
+{
+	// increment shotcount, repnotify for all client.
+	++ShotCount;
+
+	/* FX
+		네트워크 지연시간을 고려하여 주체자 클라에서는 즉각적으로 처리하고,
+		서버가 멀티캐스트를 호출해서 타 클라와 동기화되도록 처리한다. */
 	Multicast_FireEffect();
 }
 
-bool ASWWeapon::Server_PlayFireEffect_Validate()
+bool ASWWeapon::Server_Fire_Validate()
+{
+	return true;
+}
+
+// #Server - ApplyPointDamage
+void ASWWeapon::Request_ApplyDamage_Implementation(AActor* DamagedActor, float BaseDamage, const FVector& HitFromDirection, FName BoneName)
+{
+	AActor* Owner = GetOwner();
+	if (Owner)
+	{
+		FHitResult Hit(1.f);
+		Hit.BoneName = BoneName;
+
+		UGameplayStatics::ApplyPointDamage(DamagedActor, BaseDamage, HitFromDirection, Hit, Owner->GetInstigatorController(), Owner, nullptr);
+	}
+
+}
+
+bool ASWWeapon::Request_ApplyDamage_Validate(AActor* DamagedActor, float BaseDamage, const FVector& HitFromDirection, FName BoneName)
 {
 	return true;
 }
@@ -118,36 +210,16 @@ void ASWWeapon::Multicast_FireEffect_Implementation()
 		return;
 	}
 		
-	// Check controller, if they are same, don't play cause it was played in owner client.
+	// play on SimluatedProxy, not owner client.
 	APawn* Owner = Cast<APawn>(GetOwner());
-	if (Owner)
+	if (Owner && !Owner->IsLocallyControlled())
 	{
-		AController* OwnerPC = Owner->GetController();
-		AController* LocalPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-		if (OwnerPC != LocalPC)
-		{
-			// play weaponfx for other client.
-			PlayFireEffect();
-		}
+		// play weaponfx for other client.
+		PlayFireEffect();	
 	}
 }
 
 bool ASWWeapon::Multicast_FireEffect_Validate()
-{
-	return true;
-}
-
-// #Server - increment shotcount, repnotify for all client.
-void ASWWeapon::ServerFire_Implementation()
-{
-	++ShotCount;
-
-	Multicast_FireEffect();
-
-	//@TODO: Trace Target & apply damage
-}
-
-bool ASWWeapon::ServerFire_Validate()
 {
 	return true;
 }
